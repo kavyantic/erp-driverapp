@@ -4,15 +4,15 @@
     "allowImportingTsExtensions": true,
     "strict": true,
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@store": ["./store"],
+      "@/*": ["./*"]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "app/(app)/(authenticated)/trip."
   ]
 }

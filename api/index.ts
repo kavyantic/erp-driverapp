@@ -1,9 +1,11 @@
-import {  SecureKeys } from "@/context/AuthContext";
+import { ApiTypesDriver } from "@/api-types";
+import { API_URL } from "@/constants";
+import { store } from "@store";
 import axios from "axios"
 import * as SecureStore from 'expo-secure-store';
 
 const api = axios.create({
-    baseURL: "http://192.168.225.99:8000" || process.env.EXPO_PUBLIC_API_URL,
+    baseURL: API_URL || process.env.EXPO_PUBLIC_API_URL,
     timeout: 1000,
     // headers: {'X-Custom-Header': 'foobar'}
 });
@@ -12,8 +14,8 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         // Get the token from localStorage
-        const token = SecureStore.getItem(SecureKeys.TOKEN);
-        
+        const token = (store.getState().auth.user?.token);
+
 
         // If a token exists, add it to the Authorization header
         if (token) {
@@ -26,12 +28,22 @@ api.interceptors.request.use(
         // Handle errors before the request is sent
         return Promise.reject(error);
     }
-);  
-
-
-export {api}
+);
 
 
 
 
 
+const createTripApi =
+    async (payload: ApiTypesDriver['initiateTrip']['payload']): Promise<ApiTypesDriver['initiateTrip']['res']> =>
+        await api.post("/driver/trip", payload)
+
+
+const getActiveTrip =
+    async () => {
+        return await api.get<ApiTypesDriver['loadActiveTripMetadata']['res']>(`driver/trip/get_active`)
+    }
+
+getActiveTrip.query_key = "active_trip_api"
+
+export { createTripApi, getActiveTrip, api }

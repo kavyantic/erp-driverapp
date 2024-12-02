@@ -12,15 +12,17 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Alert, TextInput } from 'react-native'
 import { api } from '@/api'
 import { useRouter } from 'expo-router'
-import { InstituteContext } from '@/context/AuthContext'
+import { useAppDispatch, useAppSelector } from '@store'
+import { updateInstitute } from '@/store/slices/authSlice'
 
 
 export default function Landing() {
     const ref = useRef<TextInput>(null)
     const toast = useToastController()
+    const dispatch = useAppDispatch()
 
     const router = useRouter()
-    const instCtx = useContext(InstituteContext)
+    const inst = useAppSelector(s => s.auth.institute)
     const [code, setCode] = useState("")
 
 
@@ -28,16 +30,21 @@ export default function Landing() {
         mutationFn: async ({ publicId }: { publicId: string }) => (await api.get(`/institutes/get_metadata/publicid/${publicId}`)).data,
         onSuccess(data, variables, context) {
             if (data) {
-                instCtx?.updateInstitute(data)
+                dispatch(updateInstitute(data))
+                // alert("dipe")
                 router.navigate("/signin")
-                toast.show('Your institute found successfully.', {
-                    message: "",
+                toast.show(`${data.name}. `, {
+                    
+
                 })
             }
 
         },
         onError(error, variables, context) {
-
+            if (error.response?.status == 404) {
+                toast.show("No Institute found with " + variables.publicId+".")
+                return
+            }
             console.log(error)
             toast.show("Something went wrong.", { message: error.response?.data.message })
         },
@@ -54,12 +61,14 @@ export default function Landing() {
                     </Text>
                     <Input placeholder='Institute code...' ref={ref} onChangeText={t => setCode(t)} />
                     <Button onPress={_ => {
-                        router.navigate("/signin")
 
                         instituteMetaApi.mutate({ publicId: code })
 
                     }
-                    }>Enter</Button>
+                    }
+                    disabled={instituteMetaApi.isPending}
+                    
+                    >Enter</Button>
                 </YStack>
             </SafeAreaView>
 

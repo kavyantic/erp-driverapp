@@ -1,19 +1,21 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 
 
 
-import { ChevronDown, ChevronUp } from '@tamagui/lucide-icons'
+// import { ChevronDown, ChevronUp } from '@tamagui/lucide-icons'
 import type { SheetProps } from 'tamagui'
 import { H4, Sheet, Spinner, Text, useSheet } from 'tamagui'
 
 import { Button, H1, H2, Input, Paragraph, XStack, YStack } from 'tamagui'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Link, Redirect } from 'expo-router'
-import { AuthActionContext, AuthContext, InstituteContext } from '@/context/AuthContext'
 import { useRouter } from 'expo-router'
 import { useMutation } from '@tanstack/react-query'
 import { api } from '@/api'
 import { useToastController } from '@tamagui/toast'
+import { useAppDispatch, useAppSelector } from '@store'
+import { login } from '@/store/slices/authSlice'
+import { View } from 'react-native'
 
 
 export default function Signin() {
@@ -21,21 +23,22 @@ export default function Signin() {
   const [modal, setModal] = React.useState(true)
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const instituteCtx = useContext(InstituteContext)
-  const authCtx = useContext(AuthContext)
-  const authActionCtx = useContext(AuthActionContext)
+  const dispatch = useAppDispatch()
+  const auth = useAppSelector(s => s.auth)
   const toast = useToastController()
   const router = useRouter()
-
+  const sheetRef = useRef<View>(null)
 
   const signinApi = useMutation({
     mutationFn: async (arg: { username: string, password: string, instituteId: number }) => await api.post("/driver/auth", arg),
     onSuccess(data, variables, context) {
+      setOpen(false)
       toast.show("Successfully logged in.")
-      authActionCtx?.login(data.data)
+      dispatch(login(data.data))
 
     },
     onError(error, variables, context) {
+      console.log("error", error)
       // toast.show(error.response?.data.message,{customData:{myPreset:"succ"}})
       if (error.response?.data.message)
         toast.show(error.response?.data.message)
@@ -48,25 +51,28 @@ export default function Signin() {
   })
 
   useEffect(() => {
-    if (authCtx?.token) {
-      router.navigate("/")
 
-    }
-  }, [authCtx])
+    if (!auth.institute) {
 
-  useEffect(() => {
-    if (!instituteCtx?.institute) {
-      // router.push("/landing")
-
-      // commented because causing error
       router.navigate("/landing")
-
+      return
     }
 
-  }, [instituteCtx?.institute])
+    if (!auth.user) {
+      // router.navigate("/signin")
+      return
+    }
 
 
-  if (!instituteCtx?.institute) {
+    router.push("/(app)/(authenticated)")
+
+
+  }, [auth])
+
+
+
+
+  if (!auth?.institute) {
     return <YStack height={"100%"} display='flex' justifyContent='center' alignItems='center'><Spinner /></YStack>
   }
 
@@ -79,13 +85,14 @@ export default function Signin() {
 
 
         <YStack justifyContent='space-between' alignItems='center' minHeight={"50%"}  >
-          <H2 textAlign='center'>{instituteCtx.institute?.name}</H2>
+          <H2 textAlign='center'>{auth.institute.name}</H2>
           <Button onPress={_ => {
             setOpen(true)
           }}>Login</Button>
 
         </YStack>
         <Sheet
+          ref={sheetRef}
           forceRemoveScrollEnabled={open}
           modal={modal}
           open={open}
@@ -108,7 +115,7 @@ export default function Signin() {
           <Sheet.Frame padding="$4" justifyContent="center" alignItems="center" gap="$5">
             {/* <Button size="$6" circular icon={ChevronDown} onPress={() => setOpen(false)} /> */}
             <YStack gap={'$2'}>
-              <H4 textAlign='center' fontWeight={"bold"} color={"$accentColor"}>Sign-in</H4>
+              <H4 textAlign='center' fontWeight={"bold"} >Sign-in</H4>
               <Input width={200} placeholder='Enter Username' onChangeText={setUsername} />
               <Input width={200} placeholder='Enter password' onChangeText={setPassword} />
 
@@ -117,10 +124,11 @@ export default function Signin() {
                 <Button
 
                   // size="$"
-                  color={"$accentColor"}
+                  // color={"$accentColor"}
 
                   onPress={() => {
-                    signinApi.mutate({ username, password, instituteId: instituteCtx.institute?.id as number })
+                    
+                    signinApi.mutate({ username, password, instituteId: auth.institute?.id as number })
                   }}
                 >{signinApi.isPending ? <Spinner /> : "Continue"}</Button>
               </>
@@ -156,7 +164,7 @@ function InnerSheet(props: SheetProps) {
               size="$6"
               circular
               alignSelf="center"
-              icon={ChevronDown}
+              // icon={ChevronDown}
               onPress={() => props.onOpenChange?.(false)}
             />
 
